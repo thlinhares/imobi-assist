@@ -7,10 +7,9 @@ from scripts.load import Loader
 
 def main():
     data_dir = "data/"
-    output_dir = "output/"
 
     # Create the output directory if it doesn't exist
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    Path(data_dir).mkdir(parents=True, exist_ok=True)
 
     # Initialize the Extractor to load data from the 'data/' directory
     extractor = Extractor(data_dir)
