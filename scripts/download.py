@@ -1,6 +1,7 @@
 import os
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
+import urllib.request
 
 ITBI_DATA_URL = 'https://dados.pbh.gov.br/dataset/relatorio-itbi'
 
@@ -19,12 +20,15 @@ class Download:
         """
         Download itbi report CSV file in the specified directory.
 
-        Returns:
-        - itbi_dict: Dictionary containing url files.
         """
         try:
-            teste = self.search_html_table()
-            print(f"RESULT: {teste}")
+            itbi_report_dict = self.search_html_table()
+            for key, value in itbi_report_dict.items():
+                csv_file_path = self.download_file(key, value['url'])
+                value['path'] = csv_file_path
+            
+            print(f"Download completed successfully!")
+            return itbi_report_dict
         except Exception as e:
             print(f"Unexpected error download itbi report: {e}")
             raise
@@ -33,7 +37,6 @@ class Download:
         """ Parse the table HTML and store the collected metadata
             in the result dictionary.
         """
-
         req = Request(
             url=ITBI_DATA_URL, 
             headers={'User-Agent': 'Mozilla/5.0'}
@@ -42,7 +45,7 @@ class Download:
         html = page.read().decode("utf-8")
         parsed_html = BeautifulSoup(html, "html.parser")
         rows = parsed_html.find_all('li', {'class': 'resource-item'})
-        itbi_dict = {}
+        itbi_report_dict = {}
         for row in rows:
             heading = row.find('a', {'class': 'heading'})
             title = heading.get('title')
@@ -57,13 +60,25 @@ class Download:
 
             link = row.find('a', {'class': 'dropdown-item resource-url-analytics'})['href']
             ref_date = int("%s%s"%(ano,mes))
-            if (ref_date < 202312):
+            if (ref_date <= 202403):
                 continue
-
-            itbi_dict[ref_date] = link
+            files = {
+                'url': link
+            }
+            itbi_report_dict[ref_date] = files
         
-        return itbi_dict
+        return itbi_report_dict
 
+    def download_file(self, key, url):
+        extension = os.path.splitext(url)[1]
+        csv_file_path = os.path.join(os.path.dirname(self.data_dir), str(key) + extension)
+
+        print(f'Starting download of {csv_file_path}')
+        opener = urllib.request.build_opener()
+        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+        urllib.request.install_opener(opener)
+        urllib.request.urlretrieve(url, csv_file_path)
+        return csv_file_path
     
     def monthToNum(self, month):
         months = {
